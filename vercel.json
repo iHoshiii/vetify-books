@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "fluid": true,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "regions": ["sin1"],
+  "functions": {
+    "api/index.ts": { "maxDuration": 90 },
+    "api/cron/cleanup.ts": { "maxDuration": 60 },
+    "api/cron/screen.ts": {
+      "maxDuration": 300,
+      "includeFiles": "{dist/server/server/services/book-pdf.worker.js,node_modules/pdfjs-dist/**,node_modules/@napi-rs/**}"
+    }
+  },
+  "crons": [
+    { "path": "/api/cron/screen", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/cleanup", "schedule": "0 19 * * *" }
+  ],
+  "rewrites": [
+    { "source": "/api/v1/:booksPath*", "destination": "/api/index?booksPath=:booksPath*" },
+    { "source": "/manage", "destination": "/index.html" },
+    { "source": "/affiliate", "destination": "/index.html" },
+    { "source": "/auth/callback", "destination": "/index.html" }
+  ]
+}
