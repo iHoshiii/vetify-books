@@ -4,6 +4,12 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.production.example
+.vercel/
+[Aa][Gg][Ee][Nn][Tt].[Mm][Dd]
+[Aa][Gg][Ee][Nn][Dd].[Mm][Dd]
+[Aa][Gg][Ee][Nn][Tt][Ss].[Mm][Dd]
+[Cc][Ll][Aa][Uu][Dd][Ee].[Mm][Dd]
 .data/
 .cache/
 *.log
