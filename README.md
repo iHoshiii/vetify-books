@@ -86,8 +86,11 @@ reading or completed file saves. There is no payment or withdrawal integration.
 - [Source manifest and preserved behavior](docs/port-manifest.md)
 - [Main auth and capability requirements](docs/main-auth-contract.md)
 - [Deployment, private storage and retention](docs/deployment.md)
+- [Production environment values](docs/production-environment.md)
+- [Main-only CI, Vercel and Name.com setup](docs/production-setup.md)
 - [Feature-only migration plan](docs/migration-plan.md)
 - [Verification results and remaining integration checks](docs/verification.md)
 
-Development work is committed on `dev`. No cloud resources were deployed,
-source data migrated or files pushed.
+Production setup is committed on `chore/production-cicd`, based on `dev`.
+The workflow tests pushes to `main` before deploying to Vercel. Configure the
+project and deployment secrets using the setup guide before the first release.
