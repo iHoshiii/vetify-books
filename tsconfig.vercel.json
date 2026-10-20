@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true },
+  "include": ["api/**/*.ts", "src/server/**/*.ts", "src/shared/**/*.ts"],
+  "exclude": ["**/__tests__/**", "**/test-utils/**"]
+}
