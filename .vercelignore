@@ -5,3 +5,8 @@
 .cache
 coverage
 node_modules
+.github
+AGENT.MD
+AGENTS.md
+agend.md
+CLAUDE.md

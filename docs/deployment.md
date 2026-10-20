@@ -4,6 +4,8 @@ The deployment target is Vercel Hobby, with private Vercel Blob PDFs and daily
 screening. This checkout contains configuration and entry points only. No Vercel
 project, storage, database, DNS, deployment or main client registration was created.
 The proposed public address remains `https://books.vetify.page`.
+For main-only testing and deployment, use the [production setup guide](production-setup.md)
+and [detailed environment values](production-environment.md).
 
 ## Project setup
 
