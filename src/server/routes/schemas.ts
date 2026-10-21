@@ -18,5 +18,6 @@ export function summary(book: BookDocument, privateView = false) {
   return { id: book._id.toHexString(), title: book.title, description: book.description, topic: book.topic,
     uploadedBy: book.uploadedBy, size: book.size, createdAt: book.createdAt.toISOString(),
     ...(privateView ? { status: book.status, reason: book.moderation?.reason ?? null,
-      uploadComplete: !!book.completedAt } : {}) };
+      uploadComplete: !!book.completedAt, submittedAt: book.completedAt?.toISOString(),
+      reviewedAt: book.moderation?.checkedAt.toISOString() } : {}) };
 }

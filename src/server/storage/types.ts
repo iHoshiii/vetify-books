@@ -8,6 +8,7 @@ export interface StorageAdapter {
   quarantine(object: StoredObject): Promise<StoredObject>;
   publish(object: StoredObject, filename: string, validatedBytes: Buffer): Promise<StoredObject>;
   download(object: StoredObject, filename: string): Promise<string>;
+  preview(object: StoredObject, filename: string): Promise<string>;
 }
 export function disposition(title: string) {
   return `${title.replace(/[^a-zA-Z0-9 -]/g, '').trim().slice(0, 100) || 'veterinary-book'}.pdf`;

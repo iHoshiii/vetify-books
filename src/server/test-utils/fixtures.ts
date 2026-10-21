@@ -51,6 +51,7 @@ export class MemoryStorage implements StorageAdapter {
     return data;
   }
   async download(object: StoredObject, filename: string) { return `https://storage.invalid/${object.key}?v=${object.version}&filename=${filename}`; }
+  preview(object: StoredObject, filename: string) { return this.download(object, filename); }
   private async copy(object: StoredObject, prefix: string) {
     const bytes = await this.read(object);
     const key = `${prefix}/${object.key.split('/').at(-1)}`;

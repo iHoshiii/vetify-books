@@ -17,7 +17,7 @@ export function routeFixture() {
     state.app = createApp(config, state.repo, state.auth, state.storage).app;
   });
   beforeEach(async () => {
-    await Promise.all(['books', 'book_download_quotas', 'books_sessions', 'books_rate_limits', 'books_login_transactions']
+    await Promise.all(['books', 'book_download_quotas', 'books_sessions', 'books_rate_limits', 'books_login_transactions', 'books_saved']
       .map((name) => state.repo.db.collection(name).deleteMany({})));
     state.auth.current = identity(); state.auth.disabled = false; state.auth.unavailable = false;
     state.storage.objects.clear();

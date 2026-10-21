@@ -8,7 +8,7 @@ import type { StoredObject } from '../models/types.js';
 import type { StorageAdapter, UploadGrant } from './types.js';
 
 const ticketSchema = z.object({ action: z.enum(['upload', 'download']), key: z.string(), expires: z.number(),
-  size: z.number().optional(), filename: z.string().optional(), version: z.string().optional() });
+  size: z.number().optional(), filename: z.string().optional(), version: z.string().optional(), inline: z.boolean().optional() });
 export class LocalStorage implements StorageAdapter {
   constructor(private directory: string, private secret: string, private baseUrl: string) {}
   private path(key: string) {
@@ -67,11 +67,12 @@ export class LocalStorage implements StorageAdapter {
     assert(createHash('sha256').update(bytes).digest('hex') === object.version, 400, 'Stored PDF integrity check failed.');
     return bytes;
   }
-  async download(object: StoredObject, filename: string) {
+  async download(object: StoredObject, filename: string, inline = false) {
     const ticket = this.sign({ action: 'download', key: object.key, version: object.version, size: object.size,
-      filename, expires: Date.now() + 60000 });
+      filename, inline, expires: Date.now() + 60000 });
     return `${this.baseUrl}/api/v1/storage/download/${ticket}`;
   }
+  preview(object: StoredObject, filename: string) { return this.download(object, filename, true); }
   private async copy(object: StoredObject, prefix: 'quarantine' | 'documents') {
     const bytes = await this.read(object);
     const key = `${prefix}/${object.key.split('/').at(-1)}`;
@@ -87,6 +88,6 @@ export class LocalStorage implements StorageAdapter {
   async fetchDownload(ticket: string) {
     const payload = this.verify(ticket, 'download');
     assert(payload.version && payload.size && payload.filename?.match(/^[a-zA-Z0-9 -]+\.pdf$/), 403, 'Invalid download link.');
-    return { bytes: await this.read({ key: payload.key, version: payload.version, size: payload.size }), filename: payload.filename };
+    return { bytes: await this.read({ key: payload.key, version: payload.version, size: payload.size }), filename: payload.filename, inline: payload.inline };
   }
 }
