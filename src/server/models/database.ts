@@ -1,5 +1,5 @@
 import { MongoClient, type Db } from 'mongodb';
-import type { BookDocument, Quota, Session, Login } from './types.js';
+import type { BookDocument, Quota, Session, Login, SavedBook } from './types.js';
 import type { Config } from '../config/env.js';
 
 export class Repository {
@@ -8,11 +8,14 @@ export class Repository {
   quotas = () => this.db.collection<Quota>('book_download_quotas');
   sessions = () => this.db.collection<Session>('books_sessions');
   logins = () => this.db.collection<Login>('books_login_transactions');
+  saved = () => this.db.collection<SavedBook>('books_saved');
   limits = () => this.db.collection<{ _id: string; count: number; expiresAt: Date }>('books_rate_limits');
   async initialize() {
     await Promise.all([
       this.books().createIndex({ contentHash: 1 }, { unique: true, partialFilterExpression: { contentHash: { $type: 'string' } } }),
       this.books().createIndex({ author: 1, createdAt: -1 }),
+      this.books().createIndex({ status: 1, topic: 1, createdAt: -1 }),
+      this.saved().createIndex({ userId: 1, bookId: 1 }, { unique: true }),
       this.books().createIndex({ status: 1, 'job.readyAt': 1, 'job.leaseUntil': 1 }),
       this.books().createIndex({ completedAt: 1, incomingCleanedAt: 1, uploadExpiresAt: 1 }),
       this.quotas().createIndex({ author: 1, month: 1 }),

@@ -30,8 +30,8 @@ export function createApp(config: Config, repo: Repository, auth: AuthAdapter, s
       res.status(204).end();
     });
     app.get('/api/v1/storage/download/:ticket', async (req, res) => {
-      const { bytes, filename } = await storage.fetchDownload(String(req.params.ticket));
-      res.set('Content-Type', 'application/pdf').set('Content-Disposition', `attachment; filename="${filename}"`).send(bytes);
+      const { bytes, filename, inline } = await storage.fetchDownload(String(req.params.ticket));
+      res.set('Content-Type', 'application/pdf').set('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${filename}"`).send(bytes);
     });
   }
   app.use(express.json({ limit: '32kb' }));

@@ -44,3 +44,4 @@ export type Quota = {
 };
 export type Session = { _id: string; encryptedToken: string; expiresAt: Date; csrf: string };
 export type Login = { _id: string; state: string; verifier: string; nonce: string; returnTo?: string; expiresAt: Date };
+export type SavedBook = { _id: string; userId: string; bookId: ObjectId; createdAt: Date };

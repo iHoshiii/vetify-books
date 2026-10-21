@@ -1,6 +1,7 @@
 import { beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import BooksPage from '../pages/books-page';
 import { api, write } from '../api';
 
@@ -20,5 +21,9 @@ beforeEach(() => {
 });
 export function mount(manage = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return render(<QueryClientProvider client={client}><BooksPage manage={manage} /></QueryClientProvider>);
+  function Library() {
+    const [uploads, setUploads] = useState(manage);
+    return <BooksPage manage={uploads} onUploaded={() => setUploads(true)} />;
+  }
+  return render(<QueryClientProvider client={client}><Library /></QueryClientProvider>);
 }

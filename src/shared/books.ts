@@ -19,10 +19,14 @@ export type BookSummary = {
   uploadedBy: string;
   size: number;
   createdAt: string;
+  saved?: boolean;
 };
 export type BookUploadSummary = BookSummary & {
   status: BookStatus;
   reason: string | null;
+  uploadComplete?: boolean;
+  submittedAt?: string;
+  reviewedAt?: string;
 };
 export type BookAffiliatePage = {
   earningsCentavos: number;

@@ -1,31 +1,31 @@
-import { lazy, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ArrowUpRight } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import { AuthProvider, useAuth } from './auth';
-import { api } from './api';
 import BooksPage from './pages/books-page';
 import AuthCallback from './pages/auth-callback';
+import { LoadingScreen } from './components/loading-screen';
 
 const AffiliatePage = lazy(() => import('./pages/affiliate-page'));
 
 function Shell() {
   const { account, loading, error } = useAuth();
-  const config = useQuery({ queryKey: ['public-config'], queryFn: () => api<{ mainOrigin: string }>('/config'), retry: false });
-  const path = window.location.pathname;
+  const [path, setPath] = useState(window.location.pathname);
+  const professional = account?.user.role === 'professional';
+  if (loading) return <LoadingScreen fullScreen />;
+  if (!account) return <main className="error-screen"><h1>Unable to open Books</h1>
+    <p role="alert">{error || 'Please refresh and try again.'}</p><a className="button secondary" href="/">Try again</a></main>;
   return <>
-    <header className="site-header"><div className="header-inner"><a className="brand" href="/"><span className="brand-icon"><BookOpen size={22} /></span>
-      <span>vetify<span className="brand-books">books</span></span></a>
-      {account && <nav className="main-nav" aria-label="Main navigation"><a className={path === '/' ? 'active' : ''} href="/">Library</a>
-        {account.user.role === 'professional' && <><a className={path === '/manage' ? 'active' : ''} href="/manage">My uploads</a>
-          <a className={path === '/affiliate' ? 'active' : ''} href="/affiliate">Affiliate</a></>}</nav>}
-      <div className="header-account">{account && <span className="account-name">{account.user.name ?? 'Vetify account'}</span>}</div>
+    <header className="site-header"><div className="header-inner"><a className="brand" href="/">Vetify <span>Books</span></a>
+      {professional && <nav className="main-nav" aria-label="Main navigation">{[
+        ['/', 'Library'], ['/manage', 'My uploads'], ['/affiliate', 'Earnings'],
+      ].map(([href, label]) => <a key={href} href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>)}</nav>}
+      <div className="header-account">{account.user.name && <span className="account-name">{account.user.name}</span>}
+        <a href={account.mainOrigin} className="button secondary back-link">Back to Vetify</a></div>
     </div></header>
-    {loading ? <main className="page"><p role="status">Checking your Vetify session...</p></main> : account ?
-      path === '/affiliate' ? <Suspense fallback={<main className="page"><p role="status">Loading activity...</p></main>}><AffiliatePage /></Suspense> : <BooksPage manage={path === '/manage' && account.user.role === 'professional'} /> :
-      <main className="page"><p className="notice error" role="alert">{error || config.error?.message || 'Your Vetify session could not be checked. Refresh to try again.'}</p></main>}
-    <footer className="site-footer"><span>Vetify Books · Veterinary education</span>
-      {config.data && <a href={config.data.mainOrigin} rel="noreferrer">Vetify account & login methods<ArrowUpRight size={13} /></a>}
-      <span>Educational resources do not replace professional care.</span></footer>
+    {path === '/affiliate' && professional ? <Suspense fallback={<LoadingScreen />}><AffiliatePage /></Suspense> :
+      <BooksPage manage={path === '/manage' && professional} onUploaded={() => {
+        window.history.replaceState(null, '', '/manage'); setPath('/manage');
+      }} />}
+    <footer className="site-footer"><span>Vetify Books</span><span>For learning and reference.</span></footer>
   </>;
 }
 export default function App() {
