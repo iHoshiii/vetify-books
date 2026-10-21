@@ -6,8 +6,8 @@ export default function AuthCallback() {
   useEffect(() => {
     const search = window.location.search;
     window.history.replaceState(null, '', '/auth/callback');
-    void api('/auth/callback', { method: 'POST', body: JSON.stringify({ search }) })
-      .then(() => window.location.replace('/'))
+    void api<{ returnTo?: string }>('/auth/callback', { method: 'POST', body: JSON.stringify({ search }) })
+      .then((result) => window.location.replace(result.returnTo ?? '/'))
       .catch((failure: Error) => setError(failure.message));
   }, []);
   return <main className="page"><div className="empty-state"><h1>{error ? 'Sign-in could not be completed' : 'Signing you in...'}</h1>
