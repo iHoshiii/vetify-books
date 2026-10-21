@@ -23,7 +23,7 @@ describe('Books page, preserved library behavior', () => {
   it('hides uploads until main confirms actual professional verification', () => {
     state.role = 'professional'; state.verified = false; mount();
     expect(screen.queryByRole('button', { name: 'Upload book' })).not.toBeInTheDocument();
-    expect(screen.getByText(/Verified professional approval is required/)).toBeInTheDocument();
+    expect(screen.getByText('Your account must be verified before you can upload.')).toBeInTheDocument();
   });
   it('allows repeated downloads without commission-limit banners or disabled buttons', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});

@@ -2,6 +2,9 @@ import { book, mount, state } from './books-fixtures';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { api, write } from '../api';
+import { transferPdf } from '../upload-transfer';
+
+vi.mock('../upload-transfer', () => ({ transferPdf: vi.fn() }));
 
 describe('Books private uploads, adapted from main', () => {
   it('shows private status and only permits approved-document downloads', async () => {
@@ -13,11 +16,12 @@ describe('Books private uploads, adapted from main', () => {
       { ...book, id: 'uncertain', title: 'Uncertain scan', status: 'unverified' },
     ], total: 4, pages: 1 });
     mount(true); await screen.findByText('Pending article');
-    expect(screen.getByRole('tab', { name: 'My uploads' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'My uploads' })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(api).toHaveBeenCalledWith('/books/mine?page=1');
-    expect(screen.getByText('Checking')).toBeInTheDocument();
-    expect(screen.getByText('Not approved')).toBeInTheDocument();
-    expect(screen.getByText('Unable to verify')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for review')).toBeInTheDocument();
+    expect(screen.getByText('Needs changes')).toBeInTheDocument();
+    expect(screen.getByText('Review unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Download Pending article' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Download Unrelated article' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download Approved article' })).toBeEnabled();
@@ -29,7 +33,7 @@ describe('Books private uploads, adapted from main', () => {
     vi.mocked(write).mockImplementation(async () => { status = 'pending'; return {}; });
     mount(true); fireEvent.click(await screen.findByRole('button', { name: 'Check again' }));
     await waitFor(() => expect(write).toHaveBeenCalledWith('/books/book-id/recheck', 'test-csrf'));
-    expect(await screen.findByText('Checking')).toBeInTheDocument();
+    expect(await screen.findByText('Waiting for review')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Check again' })).not.toBeInTheDocument();
   });
   it('hashes and sends the PDF directly to storage before queuing screening', async () => {
@@ -39,7 +43,7 @@ describe('Books private uploads, adapted from main', () => {
       ? { book: { id: book.id }, upload: { url: 'https://storage.invalid/upload', method: 'PUT' } } : {});
     const digest = vi.fn(async () => new Uint8Array(32).fill(1).buffer);
     vi.stubGlobal('crypto', { subtle: { digest }, randomUUID: () => 'test-id' });
-    const transfer = vi.fn(async () => ({ ok: true })); vi.stubGlobal('fetch', transfer);
+    vi.mocked(transferPdf).mockResolvedValue();
     mount(); fireEvent.click(screen.getByRole('button', { name: 'Upload book' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: book.title } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: book.description } });
@@ -47,10 +51,10 @@ describe('Books private uploads, adapted from main', () => {
     Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(16) });
     fireEvent.change(screen.getByLabelText(/PDF document/), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.submit(screen.getByRole('button', { name: 'Upload for checking' }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: 'Upload for review' }).closest('form')!);
     await waitFor(() => expect(write).toHaveBeenCalledWith('/books/uploads', 'test-csrf', expect.objectContaining({ veterinaryOnly: true, sha256: '01'.repeat(32) })));
-    expect(transfer).toHaveBeenCalledWith('https://storage.invalid/upload', expect.objectContaining({ body: expect.any(File), credentials: 'omit' }));
+    expect(transferPdf).toHaveBeenCalledWith({ url: 'https://storage.invalid/upload', method: 'PUT' }, file, expect.any(Function));
     expect(write).toHaveBeenCalledWith('/books/book-id/complete', 'test-csrf');
-    expect(await screen.findByText('Checking')).toBeInTheDocument();
+    expect(await screen.findByText('Waiting for review')).toBeInTheDocument();
   });
 });

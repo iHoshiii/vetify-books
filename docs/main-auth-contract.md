@@ -1,63 +1,44 @@
-# Required main authentication contracts
+# Main authentication contracts
 
-Main's inspected implementation exposes version-1 introspection. It does not
-implement the complete external-app PKCE handoff or the capability response
-below. Books intentionally rejects version 1. These endpoints are requirements
-for main, not claims about its current availability. Main was not modified.
+## Shared browser sign-in
 
-## Client registration and handoff
+Main owns account login and browser sessions. Books automatically starts an OIDC
+authorization-code handoff when it has no valid Books session. Main reuses an
+active, email-verified browser session without a second sign-in or continuation
+screen. Anonymous visitors use main's login page and then return to Books.
 
-Register `vetify-books` with the exact callback
-`http://localhost:5175/auth/callback` for development. Register the proposed
-`https://books.vetify.page/auth/callback` separately for production, with its
-exact client origin. No arbitrary callback, logout URL or return path is allowed.
+Register `vetify-books` as a confidential client with `client_secret_post` and a
+separate `OIDC_BOOKS_CLIENT_SECRET` of at least 32 characters. Set that same value
+as `AUTH_CLIENT_SECRET` in Books. Do not reuse Anatomy's client secret, main's
+signing keys, or the Books capability service credential.
 
-`GET /api/v1/auth/authorize` accepts the registered client ID, redirect URI,
-`response_type=code`, scopes `books:read books:contribute`, unpredictable state,
-and PKCE `code_challenge` with `code_challenge_method=S256`.
-The response redirects with `code`, the exact `state`, and `iss` equal to
-`MAIN_AUTH_ORIGIN`. Codes must be short-lived, atomically single-use and bound
-to the registered client, callback and PKCE challenge.
+Allow the exact callback `http://localhost:5175/auth/callback` for development,
+or `https://books.vetify.page/auth/callback` for production. Main's configuration
+selects one exact callback according to its issuer. No arbitrary callback or
+external return URL is accepted. Books retains only its supported page paths.
 
-`POST /api/v1/auth/token` accepts form-encoded authorization-code grants from
-the Books backend, including `client_id`, `redirect_uri`, `code`, and
-`code_verifier`. This is a public PKCE client with no shared main signing key.
-Return a Books-audience bearer `access_token`, positive `expires_in` and
-`token_type=Bearer`, with no-store headers. Books uses the maintained
-[oauth4webapi OAuth implementation](https://github.com/panva/oauth4webapi).
-No access token enters the browser or a callback URL.
+Discover the provider at `MAIN_AUTH_ORIGIN` plus
+`/api/oidc/.well-known/openid-configuration`. Its issuer is `MAIN_AUTH_ORIGIN`
+plus `/api/oidc`. The existing native `/api/v1/auth/:provider` routes are not OIDC
+authorization endpoints, and native version-1 introspection is not used by Books.
 
-Books binds each handoff to a five-minute, single-use Mongo transaction and
-an HttpOnly host cookie. The browser posts only the callback query to the
-Books API, then clears it. Sensitive main credentials are encrypted with the
-Books-only AES-256-GCM key inside a hashed, opaque-cookie session record.
+The registered endpoints are `/api/oidc/auth`, `/api/oidc/token`,
+`/api/oidc/token/introspection` and `/api/oidc/jwks`. Books requests `openid email`
+with unpredictable state and nonce, S256 PKCE, and no forced login prompt.
+Codes are short-lived, single-use and bound to the client, callback and verifier.
+Books validates issuer, audience, nonce and the ID token's RS256 signature.
 
-## Version-2 introspection
+Books keeps app access tokens on the server, encrypted in a Books-only Mongo
+session, with a hashed opaque HttpOnly host cookie in the browser. No access
+token enters a browser URL or storage. It introspects each protected request
+using the Books client credential and checks the active token, issuer, client,
+audience, immutable subject, expiry, verified email and active account.
 
-`POST /api/v1/auth/introspect`, with the app bearer credential and JSON
-`{"audience":"vetify-books"}`, must return this payload, directly or under `data`:
-
-```json
-{
-  "version": 2,
-  "issuer": "http://localhost:8000",
-  "audience": "vetify-books",
-  "user": { "id": "immutable-main-id", "name": "Display name", "role": "professional", "status": "active" },
-  "emailVerified": true,
-  "sessionActive": true,
-  "providers": ["google", "password"],
-  "professional": { "status": "verified" },
-  "validUntil": "<UTC timestamp at most 30 seconds ahead>",
-  "tokenExpiresAt": "<UTC token expiry, not before validUntil>"
-}
-```
-
-Allowed roles are `user`, `professional`, `admin`. Professional status is
-`verified`, `pending`, `rejected` or `revoked`, and may be absent for readers.
-Main must freshly check bans, deactivation, verified email, token audience,
-issuer and current browser/native session version. Password changes and global
-logout must revoke the app credential. Books introspects each protected request
-with a five-second timeout and no local authority cache. Role alone cannot upload.
+Main binds OIDC grants to the originating native browser session and session
+version. Logout, revocation and account restrictions invalidate app access.
+Introspection must not authorize another client's token. Books also checks
+current account capabilities below and matches their owner to the token subject.
+Only current, verified professionals can submit or recheck documents.
 
 ## Worker capability endpoint
 
@@ -67,9 +48,10 @@ Books-only `MAIN_AUTH_SERVICE_TOKEN`. Main must scope that service credential to
 capability lookups, validate its audience/expiry and restrict returned attributes.
 Never use the main JWT signing secret or grant Books access to main databases.
 
-Return version, issuer, audience, user, emailVerified, professional and validUntil
-as above. The worker contract does not require the author to keep a browser
-session open, and does not require providers, sessionActive or tokenExpiresAt.
+Return `version: 2`, the main origin as `issuer`, `audience: "vetify-books"`,
+the immutable user ID, current role/status, `emailVerified`, professional approval
+and `validUntil` no more than thirty seconds ahead. The worker does not require a browser
+session to remain open, and does not require providers, sessionActive or tokenExpiresAt.
 Check the current author account and actual professional approval record.
 Books verifies that the returned main user ID is exactly the requested ID and
 rechecks approval after a positive screen, immediately before publication.
@@ -88,13 +70,13 @@ Supported OAuth errors: `unknown_account` displays
 explicit main linking. Books logout clears only the Books session. Global logout
 belongs to main and must invalidate subsequent Books introspection.
 
-## Joint acceptance, blocked until main implements these additions
+## Joint acceptance
 
 Exercise main password signup followed by Books sign-in, feature-initiated main
 signup followed by main login, Google plus explicitly linked password, unlinked
 provider collision, wrong client/callback/PKCE, code expiry and concurrent replay.
 Verify disabled accounts, session-version changes, global logout and revoked
-professional approval. Books tests its boundary with isolated contract doubles;
-they do not establish current main compatibility or a live linking integration.
+professional approval. Books and main include offline protocol and contract tests. Full acceptance also
+requires the configured main and Books deployments and a real browser session.
 
 Reference: [OAuth security best practice, RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html).

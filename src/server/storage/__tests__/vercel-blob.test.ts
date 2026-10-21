@@ -89,3 +89,10 @@ it('restricts retention deletion to incoming paths', async () => {
   await expect(storage.removeIncoming(published)).rejects.toThrow();
   expect(blob.del).toHaveBeenCalledTimes(1);
 });
+it('previews unchanged approved objects without forcing attachment downloads', async () => {
+  vi.mocked(blob.head).mockResolvedValue(info(published) as never);
+  const object = { key: published, version: 'reviewed-etag', size: pdf.length };
+  expect(new URL(await storage.preview(object, 'animal-welfare.pdf')).searchParams.has('download')).toBe(false);
+  await expect(storage.preview({ ...object, version: 'changed' }, 'animal-welfare.pdf')).rejects.toThrow();
+  await expect(storage.preview(object, 'other.pdf')).rejects.toThrow();
+});

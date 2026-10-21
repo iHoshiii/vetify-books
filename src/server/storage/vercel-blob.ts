@@ -86,7 +86,7 @@ export class VercelBlobStorage implements StorageAdapter {
     const id = object.key.split('/').at(-1)!.replace(/\.pdf$/, '');
     return this.save(`documents/${id}/${filename}`, validatedBytes);
   }
-  async download(object: StoredObject, filename: string) {
+  async download(object: StoredObject, filename: string, inline = false) {
     const current = await this.head(object.key);
     assert(current.version === object.version && current.size === object.size, 400, 'Stored PDF integrity check failed.');
     assert(object.key.startsWith('documents/') && object.key.endsWith(`/${filename}`), 400, 'Invalid approved document reference.');
@@ -94,6 +94,7 @@ export class VercelBlobStorage implements StorageAdapter {
     const signed = await blob.issueSignedToken({ ...this.options(), pathname: object.key, operations: ['get'], validUntil });
     const { presignedUrl } = await blob.presignUrl(signed, { access: 'private', operation: 'get', pathname: object.key,
       validUntil, useCache: false });
-    return blob.getDownloadUrl(presignedUrl);
+    return inline ? presignedUrl : blob.getDownloadUrl(presignedUrl);
   }
+  preview(object: StoredObject, filename: string) { return this.download(object, filename, true); }
 }

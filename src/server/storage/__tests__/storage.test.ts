@@ -21,6 +21,9 @@ describe('Private immutable object storage', () => {
       const object = await storage.head(key);
       const download = await storage.download(object, 'animal-welfare.pdf');
       expect((await storage.fetchDownload(download.split('/').at(-1)!)).bytes).toEqual(pdf);
+      const preview = await storage.preview(object, 'animal-welfare.pdf');
+      expect(await storage.fetchDownload(preview.split('/').at(-1)!)).toMatchObject({ bytes: pdf, inline: true });
+      expect((await storage.fetchDownload(download.split('/').at(-1)!)).inline).toBe(false);
       expect(() => storage.verify(`${ticket}x`, 'upload')).toThrow();
       expect(() => storage.verify(ticket, 'download')).toThrow();
       await expect(storage.upload('../../escape.pdf', 10)).rejects.toMatchObject({ status: 400 });

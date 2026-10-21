@@ -12,9 +12,13 @@ export function authRoutes(sessions: Sessions) {
     const raw = opaque();
     const state = opaque();
     const verifier = opaque();
-    await repo.logins().insertOne({ _id: digest(raw), state, verifier, expiresAt: new Date(Date.now() + 300000) });
+    const nonce = opaque();
+    const returnTo = typeof req.query.returnTo === 'string' && ['/', '/manage', '/affiliate'].includes(req.query.returnTo)
+      ? req.query.returnTo : '/';
+    const destination = await auth.authorizationUrl(state, verifier, nonce);
+    await repo.logins().insertOne({ _id: digest(raw), state, verifier, nonce, returnTo, expiresAt: new Date(Date.now() + 300000) });
     res.cookie(loginCookie, raw, sessions.options(300000));
-    res.redirect(await auth.authorizationUrl(state, verifier));
+    res.redirect(destination);
   });
   router.post('/callback', async (req, res) => {
     assert(req.get('Origin') === config.CLIENT_ORIGIN, 403, 'Invalid sign-in origin.');
@@ -26,11 +30,13 @@ export function authRoutes(sessions: Sessions) {
       401, 'Sign-in request expired or was already used.');
     const callback = new URL(config.AUTH_CALLBACK_URL);
     callback.search = req.body.search;
-    const grant = await auth.exchange(callback, login.state, login.verifier);
-    await auth.introspect(grant.token);
+    assert(login.nonce, 401, 'Sign-in request expired. Start again from Books.');
+    const grant = await auth.exchange(callback, login.state, login.verifier, login.nonce);
+    const identity = await auth.introspect(grant.token);
+    assert(!grant.subject || grant.subject === identity.user.id, 401, 'Main returned a mismatched app session.');
     await sessions.logout(req, res);
     await sessions.create(res, grant.token, grant.expiresIn);
-    res.json({ ok: true });
+    res.json({ ok: true, returnTo: login.returnTo ?? '/' });
   });
   router.get('/me', async (req, res) => {
     const { identity, csrf } = await sessions.require(req);

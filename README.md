@@ -7,11 +7,12 @@ Production targets Vercel Hobby with private Vercel Blob storage and daily scree
 
 ## Current integration boundary
 
-The application builds and tests independently. Real sign-in requires main's
-version-2 introspection, registered PKCE client and professional capability API.
-Main currently exposes version 1. Books fails closed until main implements the
-[required contracts](docs/main-auth-contract.md). No development login bypass,
-local account database, real `.env` copy or shared main signing key is included.
+The application builds and tests independently. Sign-in uses main's shared OIDC
+provider and a separate Books capability API. Main must register the Books
+client with its exact callback and independent client secret. Existing main
+browser sessions are reused automatically. Signed-out visitors use main login.
+See the [required contracts](docs/main-auth-contract.md). No development login
+bypass, local account database or shared main signing key is included.
 
 ## Local setup
 
@@ -34,6 +35,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
 Use separate values for `LOCAL_STORAGE_SECRET` and `SESSION_ENCRYPTION_KEY`.
+Set `AUTH_CLIENT_SECRET` to main's independent `OIDC_BOOKS_CLIENT_SECRET`.
 The encryption key is exactly 64 hex characters. Obtain a Books-only capability
 credential from main for `MAIN_AUTH_SERVICE_TOKEN`. A Books-only Gemini key is
 optional for startup but required for live content classification. Without it,

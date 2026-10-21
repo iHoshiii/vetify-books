@@ -19,7 +19,8 @@ file alone does not configure Vercel. Changes take effect on a new deployment.
 | `MONGODB_URI` | `mongodb+srv://BOOKS_USER:ENCODED_PASSWORD@YOUR_CLUSTER/vetify_books?retryWrites=true&w=majority` | MongoDB Atlas connection string for an independent Books database user. Replace the username, password and hostname. The database path must be `/vetify_books`, not empty. |
 | `MONGODB_DATABASE` | `vetify_books` | Must exactly match the database name in `MONGODB_URI`. |
 | `MAIN_AUTH_ORIGIN` | The main Vetify app's real HTTPS origin | Example only: `https://vetify.page`. Use the address that actually serves main's auth API. No trailing slash, path, query or fragment. |
-| `AUTH_CLIENT_ID` | `vetify-books` | Register this exact client ID in main, or use the exact ID main assigns. This is a public PKCE client, with no client secret. |
+| `AUTH_CLIENT_ID` | `vetify-books` | Register this exact client ID in main, or use the exact ID main assigns. This is a confidential OIDC client using PKCE. |
+| `AUTH_CLIENT_SECRET` | An independent random secret of at least 32 characters | Set the same value as `OIDC_BOOKS_CLIENT_SECRET` in main. Keep it distinct from Anatomy's client secret and `MAIN_AUTH_SERVICE_TOKEN`. Server only. |
 | `AUTH_CALLBACK_URL` | `https://books.vetify.page/auth/callback` | Register this exact URL in main. The origin must match `CLIENT_ORIGIN`. No extra query or fragment. |
 | `CLIENT_ORIGIN` | `https://books.vetify.page` | The canonical public Books origin. No trailing slash or path. Must match the custom domain assigned to production in Vercel. |
 | `BOOKS_STORAGE` | `vercel-blob` | Required in production. Local disk is development only. |
@@ -78,11 +79,14 @@ enable Preview or Development environments.
 
 ## Authentication prerequisite
 
-Main needs the PKCE authorize/token endpoints, version-2 introspection, the Books
-capability endpoint and the exact production callback registration described in
-[the main auth contract](main-auth-contract.md). The existing repository notes
-say main exposed version 1 when inspected. Verify its current implementation.
-Environment values alone cannot make incompatible auth endpoints work.
+Main must register Books with its shared OIDC provider at `/api/oidc`, using the
+exact production callback and its independent `OIDC_BOOKS_CLIENT_SECRET`. Books
+uses discovery, PKCE, state, nonce, signed ID tokens and client-authenticated token
+introspection. Main's separate Books capability endpoint supplies current roles
+and professional approval. See [the main auth contract](main-auth-contract.md).
+For the main AWS deployment, enable `SharedAuthEnabled` and
+`BooksSharedAuthEnabled` and provide the OIDC settings in Secrets Manager.
+Main login is reused automatically. Signed-out visitors use main's login page.
 
 ## Local use of the production worksheet
 
