@@ -13,3 +13,6 @@ coverage/
 .data/
 .cache/
 *.log
+
+.vercel
+.env*

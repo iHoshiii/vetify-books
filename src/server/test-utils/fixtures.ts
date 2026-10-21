@@ -28,8 +28,8 @@ export class FakeAuth implements AuthAdapter {
     const value = await this.introspect();
     return { ...value, user: { ...value.user, id } };
   }
-  async authorizationUrl(state: string, verifier: string) {
-    return `${config.MAIN_AUTH_ORIGIN}/api/v1/auth/authorize?state=${state}&challenge=${verifier}`;
+  async authorizationUrl(state: string, verifier: string, nonce: string) {
+    return `${config.MAIN_AUTH_ORIGIN}/api/oidc/auth?state=${state}&challenge=${verifier}&nonce=${nonce}`;
   }
   async exchange(callback: URL, state: string, verifier: string) {
     if (callback.searchParams.get('state') !== state || !callback.searchParams.get('code') || !verifier)

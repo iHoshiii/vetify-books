@@ -8,6 +8,7 @@ const schema = z.object({
   MONGODB_DATABASE: z.string().regex(/^[a-zA-Z0-9_-]+$/).default('vetify_books'),
   MAIN_AUTH_ORIGIN: url.default('http://localhost:8000'),
   AUTH_CLIENT_ID: z.string().min(1).default('vetify-books'),
+  AUTH_CLIENT_SECRET: z.string().min(32).optional(),
   AUTH_CALLBACK_URL: url.default('http://localhost:5175/auth/callback'),
   CLIENT_ORIGIN: url.default('http://localhost:5175'),
   BOOKS_STORAGE: z.enum(['local', 'vercel-blob']).default('local'),
