@@ -1,23 +1,23 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus } from 'lucide-react';
 import type { BookSummary, BookUploadSummary } from '../../shared/books';
 import { api, write } from '../api';
 import { useAuth } from '../auth';
 import { BookCard } from '../components/book-card';
 import { Pagination } from '../components/pagination';
 import { UploadForm } from '../components/upload-form';
+import { LoadingScreen } from '../components/loading-screen';
 
-export default function BooksPage({ manage = false }: { manage?: boolean }) {
+export default function BooksPage({ manage = false, onUploaded }: { manage?: boolean; onUploaded?: () => void }) {
   const { account } = useAuth();
   const client = useQueryClient();
-  const [view, setView] = useState<'library' | 'uploads'>(manage ? 'uploads' : 'library');
   const [page, setPage] = useState(1);
   const [showUpload, setShowUpload] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string>();
   const professional = account?.user.role === 'professional';
+  const view = manage && professional ? 'uploads' : 'library';
   const canUpload = professional && account?.professional?.status === 'verified';
   const daily = account?.screeningSchedule === 'daily';
   const books = useQuery({
@@ -33,7 +33,7 @@ export default function BooksPage({ manage = false }: { manage?: boolean }) {
     try {
       if (recheck) {
         await write(`/books/${book.id}/recheck`, account.csrf);
-        setMessage(daily ? 'Queued for the daily veterinary relevance check.' : 'Checking veterinary relevance...');
+        setMessage('Your book is waiting for review.');
       } else {
         const result = await write<{ url: string }>(`/books/${book.id}/download`, account.csrf, undefined,
           { 'Idempotency-Key': crypto.randomUUID() });
@@ -46,28 +46,24 @@ export default function BooksPage({ manage = false }: { manage?: boolean }) {
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Request failed.'); }
     finally { setBusy(undefined); }
   }
-  return <main className="page">
-    <header className="page-heading"><div><p className="eyebrow">THE VETERINARY LIBRARY</p><h1>Veterinary Books</h1>
-      <p>Knowledge for better animal care.</p></div>
-      {canUpload && <button className="button" aria-expanded={showUpload} aria-controls="book-upload" onClick={() => setShowUpload(!showUpload)}><Plus size={17} />Upload book</button>}
+  return <main className="page library-page">
+    <header className="page-heading"><div><h1>{view === 'uploads' ? 'My uploads' : 'Library'}</h1>
+      <p>{view === 'uploads' ? 'Your books and their review status.' : 'Books for better animal care.'}</p></div>
+      {canUpload && <button className="button" aria-expanded={showUpload} aria-controls="book-upload" onClick={() => setShowUpload(!showUpload)}>Upload book</button>}
     </header>
-    {professional && <div className="tabs" role="tablist" aria-label="Book views">{(['library', 'uploads'] as const).map((tab) =>
-      <button key={tab} role="tab" aria-selected={view === tab} className={view === tab ? 'selected' : ''}
-        onClick={() => { setView(tab); setPage(1); }}>{tab === 'library' ? 'Library' : 'My uploads'}</button>)}</div>}
-    {professional && !canUpload && <p className="notice">Verified professional approval is required before you can upload.</p>}
-    {daily && canUpload && <p className="notice">New uploads and rechecks are reviewed daily. Documents stay private until approved. Busy queues may take longer.</p>}
+    {professional && !canUpload && <p className="notice">Your account must be verified before you can upload.</p>}
     {showUpload && canUpload && account && <UploadForm csrf={account.csrf} onClose={() => setShowUpload(false)} onComplete={() => {
-      setShowUpload(false); setView('uploads'); setPage(1);
-      setMessage(daily ? 'Uploaded. Queued for the daily veterinary relevance check.' : 'Uploaded. Checking veterinary relevance...');
+      setShowUpload(false); setPage(1); onUploaded?.();
+      setMessage('Uploaded. Your book is waiting for review.');
       void client.invalidateQueries({ queryKey: ['books'] });
     }} />}
     {message && <p className="notice success" role="status">{message}</p>}
     {(error || books.error) && <p className="notice error" role="alert">{error || books.error?.message}</p>}
-    {books.isPending && <p className="loading" role="status">Loading documents...</p>}
-    {!books.isPending && !books.error && books.data?.items.length === 0 && <div className="empty-state"><BookOpen size={36} />
-      <h2>{view === 'uploads' ? 'Your library starts here' : 'No approved documents yet'}</h2>
-      <p>{view === 'uploads' ? 'Share your first veterinary resource for checking.' : 'Approved veterinary resources will appear here.'}</p></div>}
-    {books.data && <><div className="collection-label"><span>{view === 'library' ? 'Library collection' : 'Your submissions'}</span><span>{books.data.total} documents</span></div>
+    {books.isPending && <LoadingScreen />}
+    {books.data && <><div className="collection-label"><span>{books.data.total} {books.data.total === 1 ? 'book' : 'books'}</span>
+      {view === 'uploads' && <span>{daily ? 'Reviewed daily. ' : ''}Private until approved.</span>}</div>
+      {books.data.items.length === 0 && <section className="empty-state"><h2>{view === 'uploads' ? 'No uploads yet' : 'No books yet'}</h2>
+        <p>{view === 'uploads' ? 'Upload a book to get started.' : 'New books will appear here.'}</p></section>}
       <div className="book-grid">{books.data.items.map((book) => <BookCard key={book.id} book={book} daily={daily} mine={view === 'uploads'} busy={busy === book.id}
         onDownload={() => { void action(book); }} onRecheck={() => { void action(book, true); }} />)}</div>
       <Pagination page={page} pages={books.data.pages} onChange={setPage} /></>}

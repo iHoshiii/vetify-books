@@ -13,7 +13,8 @@ describe('Books private uploads, adapted from main', () => {
       { ...book, id: 'uncertain', title: 'Uncertain scan', status: 'unverified' },
     ], total: 4, pages: 1 });
     mount(true); await screen.findByText('Pending article');
-    expect(screen.getByRole('tab', { name: 'My uploads' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'My uploads' })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(api).toHaveBeenCalledWith('/books/mine?page=1');
     expect(screen.getByText('Checking')).toBeInTheDocument();
     expect(screen.getByText('Not approved')).toBeInTheDocument();
@@ -47,7 +48,7 @@ describe('Books private uploads, adapted from main', () => {
     Object.defineProperty(file, 'arrayBuffer', { value: async () => new ArrayBuffer(16) });
     fireEvent.change(screen.getByLabelText(/PDF document/), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.submit(screen.getByRole('button', { name: 'Upload for checking' }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: 'Upload for review' }).closest('form')!);
     await waitFor(() => expect(write).toHaveBeenCalledWith('/books/uploads', 'test-csrf', expect.objectContaining({ veterinaryOnly: true, sha256: '01'.repeat(32) })));
     expect(transfer).toHaveBeenCalledWith('https://storage.invalid/upload', expect.objectContaining({ body: expect.any(File), credentials: 'omit' }));
     expect(write).toHaveBeenCalledWith('/books/book-id/complete', 'test-csrf');

@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Upload, X } from 'lucide-react';
 import { BOOK_MAX_BYTES, BOOK_TOPICS } from '../../shared/books';
 import { write } from '../api';
 
@@ -38,8 +37,8 @@ export function UploadForm({ csrf, onClose, onComplete }: { csrf: string; onClos
     finally { setBusy(false); }
   }
   return <section className="upload-panel" id="book-upload" aria-label="Upload document">
-    <div className="panel-title"><div><h2>Share a veterinary resource</h2><p>Books, articles, research, case studies, and educational guides.</p></div>
-      <button aria-label="Close upload" className="icon-button" disabled={busy} onClick={onClose}><X size={20} /></button></div>
+    <div className="panel-title"><div><h2>Upload book</h2><p>Add a PDF for review.</p></div>
+      <button aria-label="Close upload" className="text-button" disabled={busy} onClick={onClose}>Cancel</button></div>
     <form onSubmit={submit}>
       <div className="form-grid"><label>Title<input name="title" required minLength={3} maxLength={150} placeholder="Document title" /></label>
         <label>Topic<select name="topic" required>{BOOK_TOPICS.map((topic) => <option key={topic}>{topic}</option>)}</select></label></div>
@@ -47,9 +46,9 @@ export function UploadForm({ csrf, onClose, onComplete }: { csrf: string; onClos
       <label className="file-label">PDF document<input name="pdf" type="file" accept=".pdf,application/pdf" required /><span>PDF only, up to 10 MB.</span></label>
       <label className="consent"><input name="veterinaryOnly" type="checkbox" required />
         <span>I have permission to share this document. Its main purpose is veterinary education, animal health, welfare, or practice.</span></label>
-      <p className="form-note">Documents stay private until screening approves their veterinary relevance. Approval does not certify clinical accuracy or sharing rights.</p>
+      <p className="form-note">Your book stays private until approved. Review does not confirm medical accuracy or sharing rights.</p>
       {error && <p role="alert" className="notice error">{error}</p>}
-      <button className="button" type="submit" disabled={busy}><Upload size={16} />{busy ? 'Uploading...' : 'Upload for checking'}</button>
+      <button className="button" type="submit" disabled={busy}>{busy ? 'Uploading...' : 'Upload for review'}</button>
     </form>
   </section>;
 }
