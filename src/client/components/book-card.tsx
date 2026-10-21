@@ -1,14 +1,12 @@
-import type { BookSummary, BookUploadSummary, BookStatus } from '../../shared/books';
+import type { BookSummary, BookUploadSummary } from '../../shared/books';
+import { ReviewStatus } from './review-status';
 
-const labels: Record<BookStatus, string> = {
-  pending: 'Checking', checking: 'Checking', approved: 'Approved', rejected: 'Not approved', unverified: 'Unable to verify',
-};
-export function BookCard({ book, mine, busy, daily = false, onDownload, onRecheck }: {
+export function BookCard({ book, mine, busy, saving, daily = false, onDownload, onRecheck, onPreview, onSave }: {
   book: BookSummary | BookUploadSummary; mine: boolean; busy: boolean;
   daily?: boolean; onDownload: () => void; onRecheck: () => void;
+  saving: boolean; onPreview: () => void; onSave: () => void;
 }) {
   const uploaded = 'status' in book ? book : undefined;
-  const complete = !('uploadComplete' in book) || book.uploadComplete !== false;
   return <article className="book-card">
     <div className="card-top"><span className="topic">{book.topic}</span><span className="file-type">PDF</span></div>
     <h2>{book.title}</h2>
@@ -16,10 +14,15 @@ export function BookCard({ book, mine, busy, daily = false, onDownload, onRechec
     <div className="book-meta"><span>{book.uploadedBy}</span><span>PDF · {(book.size / 1048576).toFixed(1)} MB</span></div>
     <div className="card-bottom">
       <time dateTime={book.createdAt}>{new Date(book.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
-      {mine && uploaded && <span className={`status ${uploaded.status}`}>{!complete ? 'Upload incomplete' : daily && uploaded.status === 'pending' ? 'Awaiting daily check' : labels[uploaded.status]}</span>}
-      {(!mine || uploaded?.status === 'approved') && <button className="button small" aria-label={`Download ${book.title}`} disabled={busy} onClick={onDownload}>{busy ? 'Preparing...' : 'Download'}</button>}
+      {(!mine || uploaded?.status === 'approved') && <div className="card-actions">
+        <button className="button secondary small" aria-label={`Preview ${book.title}`} onClick={onPreview}>Preview</button>
+        <button className="button small" aria-label={`Download ${book.title}`} disabled={busy} onClick={onDownload}>{busy ? 'Preparing...' : 'Download'}</button>
+        <button className="text-button save-button" aria-pressed={!!book.saved} disabled={saving}
+          aria-label={`${book.saved ? 'Remove' : 'Save'} ${book.title}${book.saved ? ' from saved books' : ''}`} onClick={onSave}>
+          {saving ? 'Saving...' : book.saved ? 'Saved' : 'Save'}</button>
+      </div>}
     </div>
-    {mine && uploaded?.reason && <p className="review-reason">{uploaded.reason}</p>}
+    {mine && uploaded && <ReviewStatus book={uploaded} daily={daily} />}
     {mine && uploaded && ['unverified', 'rejected'].includes(uploaded.status) &&
       <button className="button secondary small recheck" disabled={busy} onClick={onRecheck}>Check again</button>}
   </article>;

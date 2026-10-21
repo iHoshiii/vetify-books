@@ -35,3 +35,13 @@
   .page-heading { flex-wrap: wrap; }
   .site-footer { margin: 0 16px; }
 }
+@media (max-width: 700px) {
+  .library-filters { gap: 10px; }
+  .search-field { flex-basis: 100%; }
+  .library-filters select { flex: 1; min-width: 0; }
+  .library-filters > .button { padding: 10px 12px; }
+  .preview-header, .preview-controls { padding: 14px; }
+  .preview-content { padding: 12px; }
+  .preview-pages { gap: 10px; }
+  .preview-controls { gap: 12px; }
+}
